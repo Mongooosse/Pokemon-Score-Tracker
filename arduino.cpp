@@ -12,17 +12,8 @@ const int buttonSelect = 7;
 const int buttonAdd = 8;
 const int buttonMinus = 13;
 
-byte BOLD[] = {
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111,
-  B11111
-};
 
+void selectGame();
 class PokemonMatch {
 public:
 	PokemonMatch();
@@ -135,7 +126,7 @@ void PokemonMatch::decrementOpScore()
 
 void PokemonMatch::addTie()
 {
-	if (mTie == 1)
+	if (mTie >= 1)
 	{mTie = 1;}
 	else
 	{mTie++;}
@@ -143,7 +134,7 @@ void PokemonMatch::addTie()
 
 void PokemonMatch::removeTie()
 {
-	if (mTie == 0)
+	if (mTie <= 0)
 	{mTie = 0;}
 	else
 	{mTie--;}
@@ -209,46 +200,38 @@ void setup() {
   pinMode(buttonMinus, INPUT);
   pinMode(9, OUTPUT);
   analogWrite(9, 90); 
-  
+  lcd.createChar(0, BOLD);
   updateScreen();
 }
-
 
 void loop() {
-if (digitalRead(buttonAdd) == HIGH)
-
-{
-  index++;
-  if (index > 2){index = 0;}
-  updateScreen();
-  delay(250);
-}
-
-
-
-if (digitalRead(buttonMinus) == HIGH)
-
-{
-  index--;
-  if (index < 0){index = 2;}
-  updateScreen();
-  delay(250);
-}
+  if (digitalRead(buttonAdd) == HIGH)
+    {
+      index++;
+      if (index > 2){index = 0;}
+      updateScreen();
+      delay(250);
+    }
 
 
 
-if (digitalRead(buttonSelect) == HIGH)
+  if (digitalRead(buttonMinus) == HIGH)
+    {
+      index--;
+      if (index < 0){index = 2;}
+      updateScreen();
+      delay(250);
+    }
 
-{
-  selectGame();
-  delay(250);
-  updateScreen();
-}
-
+  if (digitalRead(buttonSelect) == HIGH)
+    {
+      selectGame();
+      delay(250);
+      updateScreen();
+    }
 }
 
 void updateScreen()
-
 {
   lcd.clear();
   lcd.setCursor(0,0);
@@ -259,75 +242,142 @@ void updateScreen()
   lcd.print(games[index]);
 }
 
-int jindex = 0;
 
-void MagicSubMenu(bool &inSubMenu)
+void MagicSubMenu(bool &inSubMenu, int &jindex)
 {
-      int lastSelectState = digitalRead(buttonSelect);
-      const String magic[2] = {"Commander", "Standard"};
-      lcd.setCursor(0,0);
-      lcd.print("Selected: ");
-      lcd.print(games[index]);
-      lcd.setCursor(0,1);
-      lcd.print("> ");
-      lcd.print(magic[jindex]);
-      lcd.print("                        ");
-      if (digitalRead(buttonAdd) == HIGH)
-      {
-        jindex++;
-        if (jindex > 1) {jindex = 0;}
-        delay(200);
-      }
-      if (digitalRead(buttonMinus) == HIGH){inSubMenu = false;}
-      if (digitalRead(buttonSelect) == HIGH && lastSelectState == LOW)
-      {
-        inSubMenu = false;
-        lcd.clear();
-        lcd.print("INPUT MAGIC HERE");
-        delay(1000);
-      }
-    lastSelectState = digitalRead(buttonSelect);
+  static int lastSelectState = HIGH; 
+  const String magic[2] = {"Commander", "Standard"};
+  
+  lcd.setCursor(0,0);
+  lcd.print("Selected: ");
+  lcd.print(games[index]);
+  lcd.setCursor(0,1);
+  lcd.print("> ");
+  lcd.print(magic[jindex]);
+  lcd.print("                ");
+
+  if (digitalRead(buttonAdd) == HIGH)
+  {
+    jindex++;
+    if (jindex > 1) {jindex = 0;}
+    delay(200);
   }
+
+  if (digitalRead(buttonMinus) == HIGH) {
+    inSubMenu = false;
+    while(digitalRead(buttonMinus) == HIGH); 
+  }
+
+  int selectState = digitalRead(buttonSelect);
+  if (selectState == HIGH && lastSelectState == LOW)
+  {
+    lcd.clear();
+    lcd.print("INPUT MAGIC HERE");
+    delay(1000);
+    inSubMenu = false;
+    
+    while(digitalRead(buttonSelect) == HIGH); 
+  }
+  lastSelectState = selectState;
+}
+
+
+void PokemonSubSubMenu(bool &inSubSubMenu, PokemonMatch &curr, int which)
+{
+  static int lastSelectStateSub = HIGH;
+  
+  // Display
+  String s = curr.getScore();
+  lcd.setCursor(0, 1);
+  lcd.print("EDITING: ");
+  lcd.print(s.charAt(which - 1));
+  lcd.print("    "); 
+
+  if (digitalRead(buttonAdd) == HIGH) {
+    if (which == 1) curr.incrementScore();
+    if (which == 3) curr.incrementOpScore();
+    if (which == 5) curr.addTie();
+    delay(250);
+  }
+  if (digitalRead(buttonMinus) == HIGH) {
+    if (which == 1) curr.decrementScore();
+    if (which == 3) curr.decrementOpScore();
+    if (which == 5) curr.removeTie();
+    delay(250);
+  }
+
+  int selectState = digitalRead(buttonSelect);
+  if (selectState == HIGH && lastSelectStateSub == LOW) {
+    inSubSubMenu = false; 
+    while (digitalRead(buttonSelect) == HIGH); 
+    delay(50);
+  }
+  lastSelectStateSub = selectState;
+}
 
 void PokemonSubMenu(bool &inSubMenu)
 {
-  int lastSelectState = digitalRead(buttonSelect);
-      pokemonMatch current;
-      lcd.setCursor(0,0);
-      lcd.print("Selected: ");
-      lcd.print(games[index]);
-      lcd.setCursor(0,1);
-      lcd.print("> ");
-      lcd.print(current.getScore());
-      lcd.print("                        ");
-      if (digitalRead(buttonAdd) == HIGH)
-      {
-        current.incrementScore
-        delay(200);
-      }
-      if (digitalRead(buttonMinus) == HIGH){inSubMenu = false;}
-      if (digitalRead(buttonSelect) == HIGH && lastSelectState == LOW)
-      {
-        inSubMenu = false;
-        lcd.clear();
-        lcd.print("INPUT MAGIC HERE");
-        delay(1000);
-      }
-    lastSelectState = digitalRead(buttonSelect);
+  while(digitalRead(buttonSelect) == HIGH);
+  static int cursorIndex = 0;
+  static int lastSelectState = HIGH;
+  static PokemonMatch current;
+  int scores[3] = {1, 3, 5};
+
+  // Render Display
+  String curr = current.getScore();
+  lcd.setCursor(0,0);
+  lcd.print("Selected: PKMTCG");
+  lcd.setCursor(0,1);
+  if (cursorIndex == 0) lcd.print(">"); else lcd.print(" ");
+  lcd.print(curr.charAt(0));
+  if (cursorIndex == 1) lcd.print(">"); else lcd.print("-");
+  lcd.print(curr.charAt(2));
+  if (cursorIndex == 2) lcd.print(">"); else lcd.print("-");
+  lcd.print(curr.charAt(4));
+  lcd.print("            ");
+
+  if (digitalRead(buttonAdd) == HIGH) {
+    cursorIndex++;
+    if (cursorIndex > 2) cursorIndex = 0;
+    delay(200);
+  }
+  if (digitalRead(buttonMinus) == HIGH) {
+    inSubMenu = false;
+    while(digitalRead(buttonMinus) == HIGH);
+  }
+
+  int selectState = digitalRead(buttonSelect);
+  if (selectState == HIGH && lastSelectState == LOW) {
+    bool keepEditing = true;
+    lcd.clear();
+    while (keepEditing) {
+      PokemonSubSubMenu(keepEditing, current, scores[cursorIndex]);
+      cursorIndex = 0;
+    }
+    lcd.clear();
+    lastSelectState = HIGH; 
+  } else {
+    lastSelectState = selectState;
+  }
 }
 
 void selectGame()
 {
+  int jindex = 0;
   bool inSubMenu = true;
   lcd.clear();
   if (index == 1)
   {
     while (inSubMenu)
-    {MagicSubMenu(inSubMenu);}
+    {
+    MagicSubMenu(inSubMenu, jindex);
+    jindex = 0;
+    }
   }
   else if(index == 0)
   {
     while (inSubMenu)
+    {PokemonSubMenu(inSubMenu);}
  
   }
 }
